@@ -207,9 +207,7 @@ static bool esp32EthConnected = false;
 #  include <WiFiClientSecure.h>
 #  include <WiFiMulti.h>
 WiFiMulti wifiMulti;
-#  include <Preferences.h>
 #  include <WiFiManager.h>
-Preferences preferences;
 #  ifdef MDNS_SD
 #    include <ESPmDNS.h>
 #  endif
@@ -234,6 +232,11 @@ ESP8266WiFiMulti wifiMulti;
 
 #else
 #  include <Ethernet.h>
+#endif
+
+#if defined(ESP32) || defined(ZgatewayBT)
+#  include <Preferences.h>
+Preferences preferences; // Used to store lowpowermode on ESP32 and BTConfig in ZgatewayBT
 #endif
 
 #define convertTemp_CtoF(c) ((c * 1.8) + 32)

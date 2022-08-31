@@ -222,6 +222,10 @@ Preferences preferences;
 #  include <ESP8266WiFiMulti.h>
 #  include <FS.h>
 #  include <WiFiManager.h>
+#  if defined(ZgatewayBT)
+#    include <Preferences.h>
+Preferences preferences;
+#  endif
 X509List caCert;
 #  if MQTT_SECURE_SELF_SIGNED_CLIENT
 X509List* pClCert = nullptr;

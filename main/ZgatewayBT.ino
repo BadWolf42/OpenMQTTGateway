@@ -379,8 +379,8 @@ int btQueueLengthCount = 0;
 JsonObject& getBTJsonObject(const char* json, bool haPresenceEnabled) {
   int next, last;
   for (bool blocked = false;;) {
-    next = atomic_load_explicit(&jsonBTBufferQueueNext, ::memory_order_seq_cst); // use namespace std -> ambiguous error...
-    last = atomic_load_explicit(&jsonBTBufferQueueLast, ::memory_order_seq_cst); // use namespace std -> ambiguous error...
+    next = atomic_load_explicit(&jsonBTBufferQueueNext, std::memory_order::memory_order_seq_cst);
+    last = atomic_load_explicit(&jsonBTBufferQueueLast, std::memory_order::memory_order_seq_cst);
     if ((2 * BTQueueSize + last - next) % (2 * BTQueueSize) != BTQueueSize) break;
     if (!blocked) {
       blocked = true;
@@ -393,15 +393,15 @@ JsonObject& getBTJsonObject(const char* json, bool haPresenceEnabled) {
 
 // should run from the BT core
 void pubBT(JsonObject& data) {
-  int last = atomic_load_explicit(&jsonBTBufferQueueLast, ::memory_order_seq_cst);
-  atomic_store_explicit(&jsonBTBufferQueueLast, (last + 1) % (2 * BTQueueSize), ::memory_order_seq_cst); // use namespace std -> ambiguous error...
+  int last = atomic_load_explicit(&jsonBTBufferQueueLast, std::memory_order::memory_order_seq_cst);
+  atomic_store_explicit(&jsonBTBufferQueueLast, (last + 1) % (2 * BTQueueSize), std::memory_order::memory_order_seq_cst);
 }
 
 // should run from the main core
 void emptyBTQueue() {
   for (bool first = true;;) {
-    int next = atomic_load_explicit(&jsonBTBufferQueueNext, ::memory_order_seq_cst); // use namespace std -> ambiguous error...
-    int last = atomic_load_explicit(&jsonBTBufferQueueLast, ::memory_order_seq_cst); // use namespace std -> ambiguous error...
+    int next = atomic_load_explicit(&jsonBTBufferQueueNext, std::memory_order::memory_order_seq_cst);
+    int last = atomic_load_explicit(&jsonBTBufferQueueLast, std::memory_order::memory_order_seq_cst);
     if (last == next) break;
     if (first) {
       int diff = (2 * BTQueueSize + last - next) % (2 * BTQueueSize);
@@ -411,7 +411,7 @@ void emptyBTQueue() {
     }
     JsonBundle& bundle = jsonBTBufferQueue[next % BTQueueSize];
     pubBTMainCore(bundle.object, bundle.haPresence);
-    atomic_store_explicit(&jsonBTBufferQueueNext, (next + 1) % (2 * BTQueueSize), ::memory_order_seq_cst); // use namespace std -> ambiguous error...
+    atomic_store_explicit(&jsonBTBufferQueueNext, (next + 1) % (2 * BTQueueSize), std::memory_order::memory_order_seq_cst);
     vTaskDelay(1);
   }
 }
@@ -903,11 +903,11 @@ void coreTask(void* pvParameters) {
       }
       if (lowpowermode > 0) {
         lowPowerESP32();
-        int scan = atomic_exchange_explicit(&forceBTScan, 0, ::memory_order_seq_cst); // is this enough, it will wait the full deepsleep...
+        int scan = atomic_exchange_explicit(&forceBTScan, 0, std::memory_order::memory_order_seq_cst); // is this enough, it will wait the full deepsleep...
         if (scan == 1) BTforceScan();
       } else {
         for (int interval = BTConfig.BLEinterval, waitms; interval > 0; interval -= waitms) {
-          int scan = atomic_exchange_explicit(&forceBTScan, 0, ::memory_order_seq_cst);
+          int scan = atomic_exchange_explicit(&forceBTScan, 0, std::memory_order::memory_order_seq_cst);
           if (scan == 1) BTforceScan(); // should we break after this?
           delay(waitms = interval > 100 ? 100 : interval); // 100ms
         }
@@ -1443,7 +1443,7 @@ void MQTTtoBT(char* topicOri, JsonObject& BTdata) { // json object decoding
     // Force scan now
     if (BTdata.containsKey("interval") && BTdata["interval"] == 0) {
       Log.notice(F("BLE forced scan" CR));
-      atomic_store_explicit(&forceBTScan, 1, ::memory_order_seq_cst); // ask the other core to do the scan for us
+      atomic_store_explicit(&forceBTScan, 1, std::memory_order::memory_order_seq_cst); // ask the other core to do the scan for us
     }
 
     /*

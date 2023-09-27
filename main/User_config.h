@@ -68,12 +68,18 @@
 
 //#define NetworkAdvancedSetup true //uncomment if you want to set advanced network parameters, not uncommented you can set the IP and MAC only
 #ifdef NetworkAdvancedSetup
-#  if defined(ESP8266) || defined(ESP32)
-const byte ip[] = {192, 168, 1, 99}; //IP address of the gateway, already defined for arduino below
+#  ifndef NET_IP
+#    define NET_IP "192.168.1.99"
 #  endif
-const byte gateway[] = {0, 0, 0, 0};
-const byte Dns[] = {0, 0, 0, 0};
-const byte subnet[] = {255, 255, 255, 0};
+#  ifndef NET_MASK
+#    define NET_MASK "255.255.255.0"
+#  endif
+#  ifndef NET_GW
+#    define NET_GW "192.168.1.1"
+#  endif
+#  ifndef NET_DNS
+#    define NET_DNS "192.168.1.1"
+#  endif
 #endif
 
 #if defined(ESP8266) || defined(ESP32) // for nodemcu, weemos and esp8266
@@ -122,7 +128,7 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #  define WifiManager_ssid Gateway_Name //this is the network name of the initial setup access point
 #endif
 #ifndef WifiManager_ConfigPortalTimeOut
-#  define WifiManager_ConfigPortalTimeOut 120
+#  define WifiManager_ConfigPortalTimeOut 240 //time in seconds for the setup portal to stay open, default 240s
 #endif
 #ifndef WifiManager_TimeOut
 #  define WifiManager_TimeOut 5
@@ -144,11 +150,13 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 /*-------------DEFINE YOUR MQTT PARAMETERS BELOW----------------*/
 //MQTT Parameters definition
 #if defined(ESP8266) || defined(ESP32) || defined(__AVR_ATmega2560__) || defined(__AVR_ATmega1280__)
-#  define parameters_size     60
+#  define parameters_size     64
 #  define mqtt_topic_max_size 150
 #  ifndef mqtt_max_packet_size
 #    ifdef MQTT_HTTPS_FW_UPDATE
-#      define CHECK_OTA_UPDATE     true // enable to check for the presence of a new version for your environment on Github
+#      ifndef CHECK_OTA_UPDATE
+#        define CHECK_OTA_UPDATE true // enable to check for the presence of a new version for your environment on Github
+#      endif
 #      define mqtt_max_packet_size 2560
 #    else
 #      define mqtt_max_packet_size 1024
@@ -171,6 +179,10 @@ const byte mac[] = {0xDE, 0xED, 0xBA, 0xFE, 0x54, 0x95}; //W5100 ethernet shield
 #endif
 #ifndef MQTT_PORT
 #  define MQTT_PORT "1883"
+#endif
+
+#ifndef GeneralTimeOut
+#  define GeneralTimeOut 20 // time out if a task is stuck in seconds (should be more than TimeBetweenReadingRN8209/1000) and more than 3 seconds, the WDT will reset the ESP, used also for MQTT connection
 #endif
 
 #if defined(ESP8266) || defined(ESP32)
@@ -203,6 +215,11 @@ const char* certificate PROGMEM = R"EOF("
 
 #  ifndef AWS_IOT
 #    define AWS_IOT false
+#  endif
+
+#  if AWS_IOT
+// Enable the use of ALPN for AWS IoT Core with the port 443
+const char* alpnProtocols[] = {"x-amzn-mqtt-ca", NULL};
 #  endif
 
 //#  define MQTT_HTTPS_FW_UPDATE //uncomment to enable updating via MQTT message.
@@ -702,7 +719,7 @@ Adafruit_NeoPixel leds2(ANEOPIX_IND_NUM_LEDS, ANEOPIX_IND_DATA_GPIO2, ANEOPIX_IN
 #endif
 
 /*-----------PLACEHOLDERS FOR WebUI DISPLAY--------------*/
-#define pubWebUI(...) // display the published message onto the OLED display
+#define pubWebUI(...) // display the published message onto the WebUI display
 
 /*-----------PLACEHOLDERS FOR OLED/LCD DISPLAY--------------*/
 // The real definitions are in config_M5.h / config_SSD1306.h
@@ -733,7 +750,6 @@ Preferences preferences;
 #endif
 
 #ifdef ZmqttDiscovery
-bool disc = true; // Auto discovery with Home Assistant convention
 unsigned long lastDiscovery = 0; // Time of the last discovery to trigger automaticaly to off after DiscoveryAutoOffTimer
 #endif
 
@@ -748,6 +764,13 @@ unsigned long lastDiscovery = 0; // Time of the last discovery to trigger automa
 #  define isWhite(device)       device->isWhtL
 #  define isBlack(device)       device->isBlkL
 #  define isDiscovered(device)  device->isDisc
+
+/*----------------CONFIGURABLE PARAMETERS-----------------*/
+struct SYSConfig_s {
+  bool discovery; // HA discovery convention
+  bool ohdiscovery; // OH discovery specificities
+};
+
 #endif
 
 #if defined(ZgatewayRF) || defined(ZgatewayIR) || defined(ZgatewaySRFB) || defined(ZgatewayWeatherStation) || defined(ZgatewayRTL_433)
